@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Pakistan Admin Map</title>
+  <link rel="stylesheet" href="https://js.arcgis.com/4.28/esri/themes/light/main.css">
+  <script src="https://js.arcgis.com/4.28/"></script>
+  <style>
+    #viewDiv {
+      height: 100vh;
+      width: 100%;
+    }
+    #panel {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: white;
+      padding: 10px;
+      border-radius: 5px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+      width: 250px;
+    }
+  </style>
+</head>
+<body>
+  <div id="viewDiv"></div>
+  <div id="panel">
+    <h3>Layers</h3>
+    <div id="layerList"></div>
+  </div>
+
+  <script>
+    require([
+      "esri/Map",
+      "esri/views/MapView",
+      "esri/layers/FeatureLayer",
+      "esri/widgets/LayerList",
+      "esri/symbols/SimpleFillSymbol",
+      "esri/symbols/SimpleLineSymbol",
+      "esri/renderers/SimpleRenderer",
+      "esri/layers/support/LabelClass",
+      "esri/symbols/TextSymbol"
+    ], function(
+      Map, MapView, FeatureLayer, LayerList,
+      SimpleFillSymbol, SimpleLineSymbol, SimpleRenderer,
+      LabelClass, TextSymbol
+    ) {
+      
+      // Create the map
+      const map = new Map({
+        basemap: "streets-navigation-vector"
+      });
+      
+      // Create the view
+      const view = new MapView({
+        container: "viewDiv",
+        map: map,
+        center: [69.3451, 30.3753], // Pakistan coordinates
+        zoom: 5
+      });
+      
+      // Pakistan admin layers configuration
+      const adminLayers = [
+        {
+          name: "Country Boundary",
+          url: "https://services7.arcgis.com/6b9uB6Duh6DxMK0q/arcgis/rest/services/pak_adm_wfp_20220909_GDB_gdb/FeatureServer/0",
+          labelField: "adm0_en",
+          outlineWidth: 2
+        },
+        {
+          name: "Provinces",
+          url: "https://services7.arcgis.com/6b9uB6Duh6DxMK0q/arcgis/rest/services/pak_adm_wfp_20220909_GDB_gdb/FeatureServer/1",
+          labelField: "adm1_en",
+          outlineWidth: 1.5
+        },
+        {
+          name: "Districts",
+          url: "https://services7.arcgis.com/6b9uB6Duh6DxMK0q/arcgis/rest/services/pak_adm_wfp_20220909_GDB_gdb/FeatureServer/2",
+          labelField: "adm2_en",
+          outlineWidth: 1
+        }
+      ];
+      
+      // Add each admin layer to the map
+      adminLayers.forEach(layerConfig => {
+        // Create hollow fill with red outline
+        const symbol = new SimpleFillSymbol({
+          color: [0, 0, 0, 0], // Transparent fill
+          outline: new SimpleLineSymbol({
+            color: [255, 0, 0, 0.8], // Red outline
+            width: layerConfig.outlineWidth
+          })
+        });
+        
+        // Configure labels
+        const labelClass = new LabelClass({
+          labelExpressionInfo: { expression: `$feature.${layerConfig.labelField}` },
+          symbol: new TextSymbol({
+            color: [50, 50, 50],
+            haloColor: [255, 255, 255, 0.7],
+            haloSize: 1,
+            font: {
+              size: "12px",
+              family: "sans-serif",
+              weight: "bold"
+            }
+          })
+        });
+        
+        // Create the layer
+        const layer = new FeatureLayer({
+          url: layerConfig.url,
+          title: layerConfig.name,
+          renderer: new SimpleRenderer({ symbol }),
+          labelingInfo: [labelClass],
+          popupTemplate: {
+            title: `{${layerConfig.labelField}}`,
+            content: [{
+              type: "fields",
+              fieldInfos: [
+                { fieldName: layerConfig.labelField, label: "Name" },
+                { fieldName: layerConfig.labelField.replace("_en", "_pcode"), label: "P-Code" }
+              ]
+            }]
+          }
+        });
+        
+        map.add(layer);
+      });
+      
+      // Add layer list widget
+      const layerList = new LayerList({
+        view: view,
+        container: "layerList"
+      });
+    });
+  </script>
+</body>
+</html>
